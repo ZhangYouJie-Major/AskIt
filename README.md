@@ -33,7 +33,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                      数据存储层                              │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
-│  │ Qdrant   │  │PostgreSQL│  │  MinIO   │  │  Redis    │  │
+│  │ Chroma   │  │PostgreSQL│  │  MinIO   │  │  Redis    │  │
 │  │ (向量DB) │  │ (关系DB) │  │ (文件存储)│  │ (缓存/队列)│ │
 │  └──────────┘  └──────────┘  └──────────┘  └───────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -66,7 +66,18 @@ docker-compose down
 
 ```bash
 cd backend
+
+# 安装依赖
 pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，配置数据库、API Key 等
+
+# 初始化数据库
+python -m app.db.init_db
+
+# 启动服务
 uvicorn app.main:app --reload
 ```
 
@@ -107,7 +118,7 @@ AskIt/
 
 - **前端**: Vue 3 + TypeScript + Element Plus
 - **后端**: FastAPI + LangChain + LangGraph
-- **向量数据库**: Qdrant
+- **向量数据库**: Chroma
 - **关系数据库**: PostgreSQL
 - **文件存储**: MinIO
 - **缓存/队列**: Redis + Celery

@@ -1,11 +1,16 @@
 """
 用户和部门模型
 """
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
+
+def get_utc_now():
+    """获取当前 UTC 时间"""
+    return datetime.now(timezone.utc)
 
 
 class Department(Base):
@@ -16,8 +21,8 @@ class Department(Base):
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     # 关系
     users = relationship("User", back_populates="department")
@@ -41,8 +46,8 @@ class User(Base):
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
     last_login = Column(DateTime, nullable=True)
 
     # 关系
@@ -79,12 +84,12 @@ class Document(Base):
     chunk_count = Column(Integer, default=0)
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     # 关系
     department = relationship("Department")
-    uploader = relationship("User", foreign_keys=[uploaded_by])
+    uploader = relationship("User", foreign_keys="[Document.uploaded_by]")
 
 
 class DocumentChunk(Base):
@@ -101,9 +106,9 @@ class DocumentChunk(Base):
 
     # 元数据
     page_number = Column(Integer, nullable=True)
-    metadata = Column(Text, nullable=True)  # JSON string
+    chunk_metadata = Column(Text, nullable=True)  # JSON string
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     # 关系
     document = relationship("Document")
@@ -118,8 +123,8 @@ class Conversation(Base):
     title = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 
     # 关系
     user = relationship("User")
@@ -138,7 +143,7 @@ class ConversationMessage(Base):
     # 引用的文档
     source_documents = Column(Text, nullable=True)  # JSON string
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_utc_now)
 
     # 关系
     conversation = relationship("Conversation", back_populates="messages")

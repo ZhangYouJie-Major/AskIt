@@ -3,7 +3,7 @@
 """
 from functools import lru_cache
 from typing import List
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -31,11 +31,12 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
-    # Vector Database - Qdrant
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
-    qdrant_api_key: str = ""
-    qdrant_https: bool = False
+    # Vector Database - Chroma Cloud
+    chroma_mode: str = "cloud"  # "cloud" or "local"
+    chroma_api_key: str = ""
+    chroma_tenant: str = ""
+    chroma_database: str = ""
+    chroma_persist_directory: str = "./data/chroma"  # 仅用于本地模式
 
     # File Storage - MinIO
     minio_endpoint: str = "localhost:9000"
@@ -71,13 +72,12 @@ class Settings(BaseSettings):
 
     # File Upload
     upload_max_size: int = 104857600  # 100MB
-    allowed_extensions: List[str] = Field(
-        default=[
-            ".pdf", ".doc", ".docx", ".ppt", ".pptx",
-            ".xls", ".xlsx", ".txt", ".md",
-            ".png", ".jpg", ".jpeg"
-        ]
-    )
+    allowed_extensions_raw: str = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg"
+
+    @property
+    def allowed_extensions(self) -> List[str]:
+        """允许的文件扩展名列表"""
+        return [ext.strip() for ext in self.allowed_extensions_raw.split(",")]
 
     # OCR
     ocr_enabled: bool = True

@@ -21,18 +21,6 @@ services:
     networks:
       - askit-network
 
-  # Qdrant 向量数据库
-  qdrant:
-    image: qdrant/qdrant:v1.12.0
-    container_name: askit-qdrant
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    networks:
-      - askit-network
-
   # MinIO 对象存储
   minio:
     image: minio/minio:latest
@@ -66,17 +54,16 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: askit-celery-worker
-    command: celery -A app.tasks.worker worker --loglevel=info
+    command: celery -A app.tasks.celery_worker worker --loglevel=info
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
       - MINIO_ENDPOINT=minio:9000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
     env_file:
       - ./backend/.env
     depends_on:
@@ -84,10 +71,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      qdrant:
-        condition: service_started
       minio:
         condition: service_started
+    volumes:
+      - chroma_data:/app/data/chroma
     networks:
       - askit-network
 
@@ -102,11 +89,10 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
       - MINIO_ENDPOINT=minio:9000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
     env_file:
       - ./backend/.env
     depends_on:
@@ -114,12 +100,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      qdrant:
-        condition: service_started
       minio:
         condition: service_started
     volumes:
       - ./backend/uploads:/app/uploads
+      - chroma_data:/app/data/chroma
     networks:
       - askit-network
 
@@ -142,7 +127,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: askit-flower
-    command: celery -A app.tasks.worker flower --port=5555
+    command: celery -A app.tasks.celery_worker flower --port=5555
     ports:
       - "5555:5555"
     environment:
@@ -157,7 +142,7 @@ services:
 
 volumes:
   postgres_data:
-  qdrant_data:
+  chroma_data:
   minio_data:
   redis_data:
 

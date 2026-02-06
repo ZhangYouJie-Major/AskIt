@@ -22,8 +22,7 @@ alembic==1.14.0
 psycopg2-binary==2.9.9
 
 # 向量数据库 - Chroma
-chromadb==0.4.24
-sentence-transformers==2.7.0
+chromadb==1.4.1
 
 # 文件存储
 minio==7.2.8

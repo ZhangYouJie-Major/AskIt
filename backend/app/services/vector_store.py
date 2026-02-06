@@ -1,92 +1,181 @@
 """
-向量存储服务 - 基于 Qdrant
+向量存储服务 - 基于 Chroma (Cloud/Local)
 """
 from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+import chromadb
+from chromadb.config import Settings as ChromaSettings
 
 from app.core.config import settings
 
 
 class VectorStore:
-    """向量存储服务"""
+    """向量存储服务 - 支持 Chroma Cloud 和本地模式"""
 
     def __init__(self):
-        self.client = QdrantClient(
-            host=settings.qdrant_host,
-            port=settings.qdrant_port,
-            api_key=settings.qdrant_api_key or None,
-            https=settings.qdrant_https,
-        )
         self.collection_name = "documents"
+        self.collection = None
+
+        # 根据配置选择客户端类型
+        if settings.chroma_mode == "cloud":
+            # Chroma Cloud 模式 - 使用 CloudClient
+            # 参考: https://docs.trychroma.com/docs/run-chroma/cloud-client
+            self.client = chromadb.Client(
+                api_key=settings.chroma_api_key,
+                tenant=settings.chroma_tenant,
+                database=settings.chroma_database,
+            )
+            self.tenant = settings.chroma_tenant
+            self.database = settings.chroma_database
+        else:
+            # 本地模式 - 使用 PersistentClient 进行持久化存储
+            import os
+            persist_dir = settings.chroma_persist_directory
+            # 确保目录存在
+            os.makedirs(persist_dir, exist_ok=True)
+            self.client = chromadb.PersistentClient(path=persist_dir)
+            self.tenant = None
+            self.database = None
 
     async def init_collection(self, vector_size: int = 1536):
         """初始化集合"""
-        collections = self.client.get_collections().collections
-        collection_names = [c.name for c in collections]
-
-        if self.collection_name not in collection_names:
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(
-                    size=vector_size,
-                    distance=Distance.COSINE,
+        try:
+            if settings.chroma_mode == "cloud":
+                # Cloud 模式需要指定 tenant 和 database
+                self.collection = self.client.get_collection(
+                    name=self.collection_name,
+                    tenant=self.tenant,
+                    database=self.database,
                 )
-            )
+            else:
+                self.collection = self.client.get_collection(name=self.collection_name)
+        except Exception:
+            # 集合不存在，创建新集合
+            if settings.chroma_mode == "cloud":
+                self.collection = self.client.create_collection(
+                    name=self.collection_name,
+                    tenant=self.tenant,
+                    database=self.database,
+                    metadata={"hnsw:space": "cosine"}
+                )
+            else:
+                self.collection = self.client.create_collection(
+                    name=self.collection_name,
+                    metadata={"hnsw:space": "cosine"}
+                )
 
     async def insert_points(
         self,
-        points: List[PointStruct],
+        ids: List[str],
+        vectors: List[List[float]],
+        metadatas: List[Dict[str, Any]],
     ):
         """插入向量点"""
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points,
-        )
+        if self.collection is None:
+            await self.init_collection()
+
+        if settings.chroma_mode == "cloud":
+            self.collection.add(
+                ids=ids,
+                embeddings=vectors,
+                metadatas=metadatas,
+                tenant=self.tenant,
+                database=self.database,
+            )
+        else:
+            self.collection.add(
+                ids=ids,
+                embeddings=vectors,
+                metadatas=metadatas,
+            )
 
     async def search(
         self,
         vector: List[float],
         limit: int = 5,
-        score_threshold: float = 0.7,
+        score_threshold: float = 0.0,
         department_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """向量搜索"""
-        # 构建过滤器
-        query_filter = None
+        if self.collection is None:
+            await self.init_collection()
+
+        # 构建过滤条件
+        where = None
         if department_id is not None:
-            query_filter = Filter(
-                must=[
-                    FieldCondition(
-                        key="department_id",
-                        match=MatchValue(value=department_id),
-                    )
-                ]
+            where = {"department_id": department_id}
+
+        # 执行查询
+        if settings.chroma_mode == "cloud":
+            results = self.collection.query(
+                query_embeddings=[vector],
+                n_results=limit,
+                where=where,
+                tenant=self.tenant,
+                database=self.database,
+            )
+        else:
+            results = self.collection.query(
+                query_embeddings=[vector],
+                n_results=limit,
+                where=where,
             )
 
-        results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=vector,
-            limit=limit,
-            score_threshold=score_threshold,
-            query_filter=query_filter,
-        )
+        # 格式化结果
+        formatted_results = []
+        if results and results["ids"] and results["ids"][0]:
+            for i, doc_id in enumerate(results["ids"][0]):
+                distance = results["distances"][0][i] if results.get("distances") else 0
+                # Chroma 返回的是距离，需要转换为相似度分数
+                score = 1 - distance
 
-        return [
-            {
-                "id": r.id,
-                "score": r.score,
-                "payload": r.payload,
-            }
-            for r in results
-        ]
+                if score >= score_threshold:
+                    formatted_results.append({
+                        "id": doc_id,
+                        "score": score,
+                        "payload": results["metadatas"][0][i] if results.get("metadatas") else {},
+                    })
 
-    async def delete_points(self, point_ids: List[str]):
+        return formatted_results
+
+    async def delete_points(self, ids: List[str]):
         """删除向量点"""
-        self.client.delete(
-            collection_name=self.collection_name,
-            points_selector=point_ids,
-        )
+        if self.collection is None:
+            await self.init_collection()
+
+        if settings.chroma_mode == "cloud":
+            self.collection.delete(
+                ids=ids,
+                tenant=self.tenant,
+                database=self.database,
+            )
+        else:
+            self.collection.delete(ids=ids)
+
+    async def get_collection_stats(self) -> Dict[str, Any]:
+        """获取集合统计信息"""
+        if self.collection is None:
+            await self.init_collection()
+
+        return {
+            "name": self.collection.name,
+            "count": self.collection.count(),
+        }
+
+    async def reset_collection(self):
+        """重置集合（删除所有数据）"""
+        try:
+            if settings.chroma_mode == "cloud":
+                self.client.delete_collection(
+                    name=self.collection_name,
+                    tenant=self.tenant,
+                    database=self.database,
+                )
+            else:
+                self.client.delete_collection(name=self.collection_name)
+            self.collection = None
+            await self.init_collection()
+        except Exception:
+            pass
 
 
 # 全局实例

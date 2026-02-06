@@ -64,6 +64,18 @@ dist/
 *.local
 backend/uploads/
 backend/temp/
+backend/data/
+backend/app/db/
+
+# Temporary files
+nul
+backend/nul
+backend/start.bat
+
+# Auto-generated files
+frontend/package-lock.json
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
 
 # Docker
 .dockerignore
