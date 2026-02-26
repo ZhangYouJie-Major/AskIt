@@ -59,7 +59,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { setToken, removeToken } from './api'
+import { authApi, authStorage } from './api/auth'
 
 const route = useRoute()
 const currentRoute = computed(() => route.path)
@@ -75,17 +75,13 @@ const loginForm = ref({
   password: ''
 })
 
-// Token 和用户信息的存储键
-const TOKEN_KEY = 'askit_token'
-const USER_KEY = 'askit_user'
-
-// 初始化：从 localStorage 恢复登录状态
+// 检查登录状态
 onMounted(() => {
-  const token = localStorage.getItem(TOKEN_KEY)
-  const user = localStorage.getItem(USER_KEY)
+  const token = authStorage.getToken()
+  const user = authStorage.getUser()
   if (token && user) {
     isLoggedIn.value = true
-    username.value = user
+    username.value = user.username || user.full_name || user.email
   }
 })
 
@@ -98,25 +94,19 @@ const handleLogin = async () => {
 
   loginLoading.value = true
   try {
-    // TODO: 调用登录 API 获取真实 token
-    // const response = await loginApi(loginForm.value)
-    // 模拟登录成功
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await authApi.login(loginForm.value)
 
-    // 生成模拟 token（实际应由后端返回）
-    const mockToken = `mock_token_${Date.now()}`
-
-    // 持久化存储
-    localStorage.setItem(TOKEN_KEY, mockToken)
-    localStorage.setItem(USER_KEY, loginForm.value.username)
-    setToken(mockToken)
+    // 保存 token 和用户信息
+    authStorage.setToken(response.access_token)
+    authStorage.setUser(response.user)
 
     isLoggedIn.value = true
-    username.value = loginForm.value.username
+    username.value = response.user.username || response.user.full_name || response.user.email
     loginDialogVisible.value = false
+    loginForm.value = { username: '', password: '' }
     ElMessage.success('登录成功')
   } catch (error: any) {
-    ElMessage.error(error.message || '登录失败')
+    ElMessage.error(error.response?.data?.detail || '登录失败')
   } finally {
     loginLoading.value = false
   }
@@ -124,12 +114,7 @@ const handleLogin = async () => {
 
 // 处理退出登录
 const handleLogout = () => {
-  // 清除本地存储
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
-  removeToken()
-
-  // 重置状态
+  authStorage.clear()
   isLoggedIn.value = false
   username.value = ''
   ElMessage.success('已退出登录')

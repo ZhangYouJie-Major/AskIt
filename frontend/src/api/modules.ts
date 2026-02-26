@@ -2,7 +2,6 @@ import api from './index'
 
 export interface QueryRequest {
   question: string
-  department_id: number
   history?: Array<{ role: string; content: string }>
   top_k?: number
 }
@@ -19,7 +18,7 @@ export interface QueryResponse {
 
 export const queryApi = {
   /**
-   * 执行 RAG 查询
+   * 执行 RAG 查询（自动携带 token，后端从 token 获取部门）
    */
   query: (data: QueryRequest) => {
     return api.post<any, QueryResponse>('/query/', data)
@@ -44,19 +43,18 @@ export interface DocumentListResponse {
 
 export const documentApi = {
   /**
-   * 获取文档列表
+   * 获取文档列表（自动按用户部门过滤）
    */
-  list: (params?: { department_id?: number; skip?: number; limit?: number }) => {
+  list: (params?: { skip?: number; limit?: number }) => {
     return api.get<any, DocumentListResponse>('/documents/', { params })
   },
 
   /**
-   * 上传文档
+   * 上传文档（自动使用用户所属部门）
    */
-  upload: (file: File, department_id: number) => {
+  upload: (file: File) => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('department_id', department_id.toString())
     return api.post<any, Document>('/documents/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })

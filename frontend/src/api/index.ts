@@ -23,10 +23,10 @@ export const removeToken = (): void => {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// 请求拦截器
+// 请求拦截器 - 添加 JWT token
 api.interceptors.request.use(
   config => {
-    const token = getToken()
+    const token = localStorage.getItem('access_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -44,6 +44,12 @@ api.interceptors.response.use(
   },
   error => {
     console.error('API Error:', error)
+    // 401 未授权，清除 token 并刷新页面
+    if (error.response?.status === 401) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('user_info')
+      window.location.href = '/'
+    }
     return Promise.reject(error)
   }
 )

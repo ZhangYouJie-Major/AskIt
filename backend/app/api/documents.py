@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.models import Document
+from app.models import Document, User
 from app.core.config import settings
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -35,14 +36,14 @@ class DocumentListResponse(BaseModel):
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    department_id: int = 1,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    上传文档
+    上传文档（需要登录）
 
     - **file**: 文档文件
-    - **department_id**: 部门ID
+    - 部门ID和用户ID自动从当前登录用户获取
     """
     # 验证文件类型
     if not file.filename:
@@ -63,6 +64,9 @@ async def upload_document(
             detail=f"文件大小超过限制 ({settings.upload_max_size} bytes)"
         )
 
+    # 使用当前用户的部门ID
+    department_id = current_user.department_id or 1
+
     # TODO: 实际的文件存储和解析逻辑
     # 这里先创建数据库记录
     document = Document(
@@ -74,7 +78,7 @@ async def upload_document(
         mime_type=file.content_type,
         status="pending",
         department_id=department_id,
-        uploaded_by=1,  # TODO: 从 JWT 获取用户ID
+        uploaded_by=current_user.id,
     )
 
     db.add(document)
@@ -86,26 +90,25 @@ async def upload_document(
 
 @router.get("/", response_model=DocumentListResponse)
 async def list_documents(
-    department_id: int = None,
     skip: int = 0,
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    获取文档列表
+    获取文档列表（需要登录）
 
-    - **department_id**: 部门ID（可选，用于过滤）
+    只显示当前用户所在部门的文档
     - **skip**: 跳过的记录数
     - **limit**: 返回的记录数
     """
     from sqlalchemy import select, func
 
-    query = select(Document)
-    count_query = select(func.count(Document.id))
+    # 使用当前用户的部门ID过滤
+    department_id = current_user.department_id or 1
 
-    if department_id:
-        query = query.where(Document.department_id == department_id)
-        count_query = count_query.where(Document.department_id == department_id)
+    query = select(Document).where(Document.department_id == department_id)
+    count_query = select(func.count(Document.id)).where(Document.department_id == department_id)
 
     query = query.order_by(Document.created_at.desc()).offset(skip).limit(limit)
 
