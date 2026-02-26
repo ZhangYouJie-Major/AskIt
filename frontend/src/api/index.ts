@@ -8,10 +8,28 @@ const api = axios.create({
   }
 })
 
+// Token 管理
+const TOKEN_KEY = 'askit_token'
+
+export const getToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export const setToken = (token: string): void => {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export const removeToken = (): void => {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
 // 请求拦截器
 api.interceptors.request.use(
   config => {
-    // TODO: 添加 JWT token
+    const token = getToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   error => {
