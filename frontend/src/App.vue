@@ -56,9 +56,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { authApi, authStorage } from './api/auth'
 
 const route = useRoute()
 const currentRoute = computed(() => route.path)
@@ -74,6 +75,16 @@ const loginForm = ref({
   password: ''
 })
 
+// 检查登录状态
+onMounted(() => {
+  const token = authStorage.getToken()
+  const user = authStorage.getUser()
+  if (token && user) {
+    isLoggedIn.value = true
+    username.value = user.username || user.full_name || user.email
+  }
+})
+
 // 处理登录
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
@@ -83,15 +94,19 @@ const handleLogin = async () => {
 
   loginLoading.value = true
   try {
-    // TODO: 调用登录 API
-    // 模拟登录成功
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await authApi.login(loginForm.value)
+    
+    // 保存 token 和用户信息
+    authStorage.setToken(response.access_token)
+    authStorage.setUser(response.user)
+    
     isLoggedIn.value = true
-    username.value = loginForm.value.username
+    username.value = response.user.username || response.user.full_name || response.user.email
     loginDialogVisible.value = false
+    loginForm.value = { username: '', password: '' }
     ElMessage.success('登录成功')
   } catch (error: any) {
-    ElMessage.error(error.message || '登录失败')
+    ElMessage.error(error.response?.data?.detail || '登录失败')
   } finally {
     loginLoading.value = false
   }
@@ -99,6 +114,7 @@ const handleLogin = async () => {
 
 // 处理退出登录
 const handleLogout = () => {
+  authStorage.clear()
   isLoggedIn.value = false
   username.value = ''
   ElMessage.success('已退出登录')
