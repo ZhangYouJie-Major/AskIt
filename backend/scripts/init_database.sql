@@ -221,11 +221,13 @@ INSERT INTO departments (name, description, is_active) VALUES
     ('运营部', '负责产品运营', TRUE)
 ON CONFLICT (name) DO NOTHING;
 
--- 创建默认超级管理员 (密码: admin123, 需要在应用中修改)
--- 注意: 这里的 hashed_password 是 'admin123' 的 bcrypt 哈希，仅用于开发测试
-INSERT INTO users (username, email, hashed_password, full_name, is_superuser, department_id) VALUES
-    ('admin', 'admin@askit.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEmc0i', '系统管理员', TRUE, 1),
-    ('testuser', 'test@askit.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEmc0i', '测试用户', FALSE, 2)
+-- 创建默认超级管理员和测试用户
+-- 注意: 这里的 hashed_password 是 bcrypt 哈希（bcrypt 4.3.0 生成），仅用于开发测试
+-- admin 密码: AskIt@2026!Admin
+-- testuser 密码: Test@2026!User
+INSERT INTO users (username, email, hashed_password, full_name, is_superuser, is_active, department_id) VALUES
+    ('admin', 'admin@askit.com', '$2b$12$L4w5Jti6nlh3PLCSwqDDqOq0gkRTbWcKlWtptfhSJuIO6UxRgLEzG', '系统管理员', TRUE, TRUE, 1),
+    ('testuser', 'test@askit.com', '$2b$12$Fs2w6laUck0q9Btj0VSKpuubh65j1D9UTRrLYpqslQxLfct7qauiG', '测试用户', FALSE, TRUE, 2)
 ON CONFLICT (username) DO NOTHING;
 
 -- ----------------------------------------------------------------------------
@@ -239,7 +241,9 @@ ON CONFLICT (username) DO NOTHING;
 \echo '数据库信息:'
 \echo '  数据库名: askit_db'
 \echo '  表数量:   6'
-\echo '  默认用户: admin / admin123'
+\echo '  默认用户:'
+\echo '    - admin / AskIt@2026!Admin'
+\echo '    - testuser / Test@2026!User'
 \echo ''
 \echo '下一步:'
 \echo '  1. 修改默认管理员密码'

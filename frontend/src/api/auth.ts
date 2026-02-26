@@ -49,18 +49,30 @@ export const authApi = {
 
 // 本地存储工具
 export const authStorage = {
-  getToken: () => localStorage.getItem('access_token'),
-  setToken: (token: string) => localStorage.setItem('access_token', token),
+  getToken: () => {
+    const token = localStorage.getItem('access_token')
+    console.log('[Auth] getToken:', !!token)
+    return token
+  },
+  setToken: (token: string) => {
+    console.log('[Auth] setToken:', !!token)
+    localStorage.setItem('access_token', token)
+  },
   removeToken: () => localStorage.removeItem('access_token'),
 
   getUser: (): UserInfo | null => {
     const user = localStorage.getItem('user_info')
+    console.log('[Auth] getUser:', !!user)
     return user ? JSON.parse(user) : null
   },
-  setUser: (user: UserInfo) => localStorage.setItem('user_info', JSON.stringify(user)),
+  setUser: (user: UserInfo) => {
+    console.log('[Auth] setUser:', user.username)
+    localStorage.setItem('user_info', JSON.stringify(user))
+  },
   removeUser: () => localStorage.removeItem('user_info'),
 
   clear: () => {
+    console.log('[Auth] clear')
     localStorage.removeItem('access_token')
     localStorage.removeItem('user_info')
   }

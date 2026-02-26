@@ -45,7 +45,8 @@
 
 - Python 3.11+
 - Node.js 18+
-- Docker & Docker Compose
+- Docker & Docker Compose (可选)
+- [uv](https://github.com/astral-sh/uv) (推荐，Python 包管理器)
 
 ### Docker 部署 (推荐)
 
@@ -67,19 +68,30 @@ docker-compose down
 ```bash
 cd backend
 
+# 安装 uv (如果还没安装)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# 或使用 Homebrew
+brew install uv
+
 # 安装依赖
-pip install -r requirements.txt
+uv sync
 
 # 配置环境变量
 cp .env.example .env
 # 编辑 .env 文件，配置数据库、API Key 等
 
 # 初始化数据库
-python -m app.db.init_db
+psql -h localhost -p 5432 -U postgres -f scripts/init_database.sql
+# 或使用 Docker PostgreSQL
+docker exec -i askit-postgres psql -U askit < scripts/init_database.sql
 
 # 启动服务
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
+
+**默认账号密码：**
+- 管理员: `admin` / `AskIt@2026!Admin`
+- 测试用户: `testuser` / `Test@2026!User`
 
 #### 前端
 
@@ -100,7 +112,10 @@ AskIt/
 │   │   ├── models/         # 数据模型
 │   │   ├── services/       # 业务逻辑
 │   │   └── utils/          # 工具函数
-│   └── tests/              # 测试文件
+│   ├── scripts/            # 数据库初始化脚本
+│   ├── pyproject.toml      # Python 依赖声明
+│   ├── uv.lock             # 依赖版本锁定
+│   └── requirements.txt    # pip 兼容依赖
 ├── frontend/               # 前端应用
 │   └── src/
 │       ├── api/            # API 调用
@@ -118,23 +133,28 @@ AskIt/
 
 - **前端**: Vue 3 + TypeScript + Element Plus
 - **后端**: FastAPI + LangChain + LangGraph
+- **包管理**: uv (Python) + npm (Node.js)
 - **向量数据库**: Chroma
 - **关系数据库**: PostgreSQL
 - **文件存储**: MinIO
 - **缓存/队列**: Redis + Celery
-- **任务队列**: Celery
 
 ## 📝 功能特性
 
-- [x] 多格式文档上传 (Word, Excel, PPT, PDF, Markdown, 代码)
+- [x] 多格式文档上传 (Word, Excel, PPT, PDF, Markdown)
 - [x] 智能文档解析与分块
 - [x] 向量存储与语义检索
 - [x] OCR 图片识别
 - [x] 部门级权限隔离
-- [x] 混合增强检索 (文档 + 联网 + 内部系统)
-- [x] 多轮对话记忆
+- [x] 混合增强检索 (文档 + 联网)
+- [x] 用户认证与授权
+- [x] 登录状态持久化
 - [ ] 管理后台
 - [ ] 系统监控
+
+## 🔒 安全说明
+
+⚠️ **重要**: 首次部署后请立即修改默认密码！
 
 ## 📄 许可证
 

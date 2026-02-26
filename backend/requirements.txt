@@ -1,3 +1,24 @@
+# ============================================================================
+# 依赖说明
+# ============================================================================
+# 本项目使用 uv 管理依赖
+#
+# 主要依赖声明: pyproject.toml
+# 锁定文件: uv.lock
+#
+# 安装依赖:
+#   uv sync
+#
+# 添加依赖:
+#   uv add package-name
+#
+# 如果需要使用 pip，请先运行:
+#   uv pip compile pyproject.toml -o requirements.txt
+# ============================================================================
+
+# 此文件保留用于兼容性，实际依赖请查看 pyproject.toml
+# 以下内容为历史参考，请使用 `uv sync` 安装依赖
+
 # FastAPI
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
@@ -48,6 +69,7 @@ chardet==5.2.0
 # 认证和安全
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
 email-validator==2.2.0
 
 # HTTP客户端

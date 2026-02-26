@@ -144,7 +144,7 @@ async def login(
             detail="用户已被禁用"
         )
     # 更新最后登录时间
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     
     # 获取部门信息
@@ -204,7 +204,7 @@ async def login_json(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     
     # 更新最后登录时间
     from datetime import datetime, timezone
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     await db.commit()
     
     # 获取部门信息

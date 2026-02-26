@@ -93,8 +93,10 @@ const handleLogin = async () => {
   }
 
   loginLoading.value = true
+  console.log('[Login] 开始登录:', loginForm.value.username)
   try {
     const response = await authApi.login(loginForm.value)
+    console.log('[Login] 登录响应:', response)
 
     // 保存 token 和用户信息
     authStorage.setToken(response.access_token)
@@ -106,6 +108,7 @@ const handleLogin = async () => {
     loginForm.value = { username: '', password: '' }
     ElMessage.success('登录成功')
   } catch (error: any) {
+    console.error('[Login] 登录失败:', error)
     ElMessage.error(error.response?.data?.detail || '登录失败')
   } finally {
     loginLoading.value = false

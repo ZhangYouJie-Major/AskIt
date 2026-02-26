@@ -37,7 +37,7 @@
         >
           <div class="message-avatar">
             <el-icon v-if="msg.role === 'user'"><User /></el-icon>
-            <el-icon v-else><Robot /></el-icon>
+            <el-icon v-else><ChatLineSquare /></el-icon>
           </div>
           <div class="message-content">
             <div class="message-text" v-html="renderMarkdown(msg.content)"></div>
