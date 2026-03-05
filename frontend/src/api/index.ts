@@ -29,8 +29,8 @@ api.interceptors.response.use(
   },
   error => {
     console.error('API Error:', error)
-    // 401 未授权，清除 token 并刷新页面
-    if (error.response?.status === 401) {
+    // 401 未授权，但如果是登录接口，不要自动跳转，让组件处理错误提示
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       localStorage.removeItem('access_token')
       localStorage.removeItem('user_info')
       window.location.href = '/'
