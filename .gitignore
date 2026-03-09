@@ -66,6 +66,8 @@ backend/uploads/
 backend/temp/
 backend/data/
 backend/app/db/
+backend/test_data/
+backend/test_chroma/
 
 # Temporary files
 nul
