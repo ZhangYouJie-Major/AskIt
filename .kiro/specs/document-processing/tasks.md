@@ -13,18 +13,18 @@
   - 定义自定义异常类：`UnsupportedFileTypeError`、`FileParseError`、`EmbeddingAPIError`、`DocumentProcessingError`
   - _需求: 1.5, 1.6, 1.7, 2.8, 3.7, 5.9_
 
-- [ ] 2. 实现文件解析器（File Parser）
-  - [ ] 2.1 实现 `FileParser` 抽象基类和 `FileParserFactory` 工厂类
+- [x] 2. 实现文件解析器（File Parser）
+  - [x] 2.1 实现 `FileParser` 抽象基类和 `FileParserFactory` 工厂类
     - 创建 `backend/app/services/document_processing/parsers.py`
     - 实现工厂方法，根据文件扩展名返回对应解析器
     - _需求: 1.5, 1.7_
 
-  - [ ] 2.2 实现 `PDFParser`
+  - [x] 2.2 实现 `PDFParser`
     - 使用 PyPDF2 提取 PDF 文本内容和页码信息
     - 处理损坏文件的异常，抛出 `FileParseError`
     - _需求: 1.1, 1.6_
 
-  - [ ] 2.3 实现 `WordParser`、`TextParser`、`MarkdownParser`
+  - [x] 2.3 实现 `WordParser`、`TextParser`、`MarkdownParser`
     - `WordParser`: 使用 python-docx 提取段落结构
     - `TextParser` / `MarkdownParser`: 读取完整文本内容，保留格式标记
     - _需求: 1.2, 1.3, 1.4, 1.6_
@@ -34,20 +34,20 @@
     - 测试不支持格式时抛出 `UnsupportedFileTypeError`
     - _需求: 1.5, 1.6_
 
-- [ ] 3. 实现文档分块器（Document Chunker）
-  - [ ] 3.1 实现 `DocumentChunker` 核心类和 SIMPLE 策略
+- [x] 3. 实现文档分块器（Document Chunker）
+  - [x] 3.1 实现 `DocumentChunker` 核心类和 SIMPLE 策略
     - 创建 `backend/app/services/document_processing/chunker.py`
     - 实现固定大小分块，支持 `chunk_size` 和 `chunk_overlap` 配置
     - 为每个块生成序号和元数据
     - _需求: 2.1, 2.2, 2.8_
 
-  - [ ] 3.2 实现 SMART 分块策略
+  - [x] 3.2 实现 SMART 分块策略
     - 在自然边界（空格、换行、句号）处调整分割点
     - 中文文本优先在句号、问号、感叹号等标点处分割
     - 超大段落强制分割并保留重叠区域
     - _需求: 2.3, 2.4, 2.7_
 
-  - [ ] 3.3 实现 PARAGRAPH 分块策略和章节感知分割
+  - [x] 3.3 实现 PARAGRAPH 分块策略和章节感知分割
     - 优先在段落边界处分割
     - 识别 Markdown 标题层级，在标题处优先分割
     - 识别代码块并保持完整性
@@ -64,16 +64,16 @@
     - 测试代码块完整性保持
     - _需求: 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 4. 检查点 — 确保所有测试通过，如有问题请告知用户
+- [x] 4. 检查点 — 确保所有测试通过，如有问题请告知用户
 
 - [ ] 5. 实现 Embedding 服务（Embedding Service）
-  - [ ] 5.1 实现 `EmbeddingService` 基础结构和 OpenAI 提供商支持
+  - [x] 5.1 实现 `EmbeddingService` 基础结构和 OpenAI 提供商支持
     - 创建 `backend/app/services/document_processing/embedding.py`
     - 使用 OpenAI SDK，通过 `base_url` 参数支持多提供商切换
     - 实现批量处理逻辑（每批最多 100 个文本）
     - _需求: 3.1, 3.2, 3.5_
 
-  - [ ] 5.2 实现 GLM 和 Qwen 提供商配置
+  - [x] 5.2 实现 GLM 和 Qwen 提供商配置
     - 配置 GLM base_url: `https://open.bigmodel.cn/api/paas/v4`
     - 配置 Qwen base_url: `https://dashscope.aliyuncs.com/compatible-mode/v1`
     - 支持通过配置文件指定 `embedding_model` 名称

@@ -16,6 +16,8 @@ from app.services.document_processing.types import (
     ProcessingResult,
     ChunkStrategy,
 )
+from app.services.document_processing.chunker import DocumentChunker
+from app.services.document_processing.embedding import EmbeddingService
 
 __all__ = [
     # 异常类
@@ -28,4 +30,7 @@ __all__ = [
     "TextChunk",
     "ProcessingResult",
     "ChunkStrategy",
+    # 核心类
+    "DocumentChunker",
+    "EmbeddingService",
 ]

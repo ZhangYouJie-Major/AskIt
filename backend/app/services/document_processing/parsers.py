@@ -61,7 +61,7 @@ class FileParser(ABC):
 class PDFParser(FileParser):
     """PDF 文件解析器
     
-    使用 PyPDF2 提取 PDF 文本内容和页码信息
+    使用 pypdf 提取 PDF 文本内容和页码信息
     """
     
     def parse(self, file_path: str) -> ParsedDocument:
@@ -76,8 +76,89 @@ class PDFParser(FileParser):
         Raises:
             FileParseError: 文件解析失败
         """
-        # 实现将在任务 2.2 中完成
-        raise NotImplementedError("PDFParser 将在任务 2.2 中实现")
+        # 验证文件存在
+        path = self._validate_file_exists(file_path)
+        
+        try:
+            # 导入 pypdf 库
+            from pypdf import PdfReader
+            
+            # 打开并读取 PDF 文件
+            reader = PdfReader(str(path))
+            
+            # 获取页数
+            page_count = len(reader.pages)
+            
+            # 提取所有页面的文本内容
+            content_parts = []
+            page_info = {}
+            
+            for page_num, page in enumerate(reader.pages, start=1):
+                try:
+                    # 提取页面文本
+                    page_text = page.extract_text()
+                    if page_text:
+                        content_parts.append(page_text)
+                        # 记录每页的字符数
+                        page_info[f"page_{page_num}"] = {
+                            "page_number": page_num,
+                            "char_count": len(page_text)
+                        }
+                except Exception as e:
+                    # 单页提取失败不应导致整个文档解析失败
+                    # 记录警告并继续处理其他页面
+                    page_info[f"page_{page_num}"] = {
+                        "page_number": page_num,
+                        "error": str(e)
+                    }
+            
+            # 合并所有页面的文本内容
+            content = "\n\n".join(content_parts)
+            
+            # 如果没有提取到任何文本，可能是扫描版 PDF 或损坏文件
+            if not content.strip():
+                raise FileParseError(
+                    file_path=file_path,
+                    reason="PDF 文件中未提取到文本内容（可能是扫描版或损坏文件）"
+                )
+            
+            # 构建元数据
+            metadata = {
+                "page_count": page_count,
+                "pages": page_info,
+                "total_chars": len(content)
+            }
+            
+            # 尝试提取 PDF 元数据（如标题、作者等）
+            if reader.metadata:
+                pdf_metadata = {}
+                if reader.metadata.title:
+                    pdf_metadata["title"] = reader.metadata.title
+                if reader.metadata.author:
+                    pdf_metadata["author"] = reader.metadata.author
+                if reader.metadata.subject:
+                    pdf_metadata["subject"] = reader.metadata.subject
+                if reader.metadata.creator:
+                    pdf_metadata["creator"] = reader.metadata.creator
+                if pdf_metadata:
+                    metadata["pdf_metadata"] = pdf_metadata
+            
+            return ParsedDocument(
+                content=content,
+                page_count=page_count,
+                metadata=metadata
+            )
+            
+        except FileParseError:
+            # 重新抛出已经格式化的 FileParseError
+            raise
+        except Exception as e:
+            # 捕获所有其他异常并包装为 FileParseError
+            raise FileParseError(
+                file_path=file_path,
+                reason=f"PDF 解析失败: {type(e).__name__}",
+                original_error=e
+            )
 
 
 class WordParser(FileParser):
@@ -98,8 +179,85 @@ class WordParser(FileParser):
         Raises:
             FileParseError: 文件解析失败
         """
-        # 实现将在任务 2.3 中完成
-        raise NotImplementedError("WordParser 将在任务 2.3 中实现")
+        # 验证文件存在
+        path = self._validate_file_exists(file_path)
+        
+        try:
+            # 导入 python-docx 库
+            from docx import Document
+            
+            # 打开并读取 Word 文档
+            doc = Document(str(path))
+            
+            # 提取所有段落的文本内容
+            paragraphs = []
+            paragraph_info = []
+            
+            for idx, para in enumerate(doc.paragraphs):
+                # 获取段落文本
+                para_text = para.text
+                if para_text:  # 只保留非空段落
+                    paragraphs.append(para_text)
+                    # 记录段落信息
+                    paragraph_info.append({
+                        "index": idx,
+                        "char_count": len(para_text),
+                        "style": para.style.name if para.style else None
+                    })
+            
+            # 合并所有段落的文本内容
+            content = "\n\n".join(paragraphs)
+            
+            # 如果没有提取到任何文本，可能是空文档或损坏文件
+            if not content.strip():
+                raise FileParseError(
+                    file_path=file_path,
+                    reason="Word 文档中未提取到文本内容（可能是空文档或损坏文件）"
+                )
+            
+            # 构建元数据
+            metadata = {
+                "paragraph_count": len(paragraphs),
+                "paragraphs": paragraph_info,
+                "total_chars": len(content)
+            }
+            
+            # 尝试提取文档核心属性（如标题、作者等）
+            try:
+                core_props = doc.core_properties
+                doc_metadata = {}
+                if core_props.title:
+                    doc_metadata["title"] = core_props.title
+                if core_props.author:
+                    doc_metadata["author"] = core_props.author
+                if core_props.subject:
+                    doc_metadata["subject"] = core_props.subject
+                if core_props.created:
+                    doc_metadata["created"] = str(core_props.created)
+                if core_props.modified:
+                    doc_metadata["modified"] = str(core_props.modified)
+                if doc_metadata:
+                    metadata["doc_properties"] = doc_metadata
+            except Exception:
+                # 如果无法提取属性，忽略错误继续
+                pass
+            
+            return ParsedDocument(
+                content=content,
+                page_count=None,  # Word 文档没有固定页数概念
+                metadata=metadata
+            )
+            
+        except FileParseError:
+            # 重新抛出已经格式化的 FileParseError
+            raise
+        except Exception as e:
+            # 捕获所有其他异常并包装为 FileParseError
+            raise FileParseError(
+                file_path=file_path,
+                reason=f"Word 文档解析失败: {type(e).__name__}",
+                original_error=e
+            )
 
 
 class TextParser(FileParser):
@@ -120,8 +278,64 @@ class TextParser(FileParser):
         Raises:
             FileParseError: 文件解析失败
         """
-        # 实现将在任务 2.3 中完成
-        raise NotImplementedError("TextParser 将在任务 2.3 中实现")
+        # 验证文件存在
+        path = self._validate_file_exists(file_path)
+        
+        try:
+            # 尝试多种编码读取文件
+            encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
+            content = None
+            used_encoding = None
+            
+            for encoding in encodings:
+                try:
+                    with open(path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    used_encoding = encoding
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            # 如果所有编码都失败，抛出错误
+            if content is None:
+                raise FileParseError(
+                    file_path=file_path,
+                    reason=f"无法使用任何支持的编码读取文件（尝试过: {', '.join(encodings)}）"
+                )
+            
+            # 如果文件为空，抛出错误
+            if not content.strip():
+                raise FileParseError(
+                    file_path=file_path,
+                    reason="文本文件为空"
+                )
+            
+            # 统计行数
+            line_count = content.count('\n') + 1
+            
+            # 构建元数据
+            metadata = {
+                "encoding": used_encoding,
+                "line_count": line_count,
+                "total_chars": len(content)
+            }
+            
+            return ParsedDocument(
+                content=content,
+                page_count=None,  # 纯文本文件没有页数概念
+                metadata=metadata
+            )
+            
+        except FileParseError:
+            # 重新抛出已经格式化的 FileParseError
+            raise
+        except Exception as e:
+            # 捕获所有其他异常并包装为 FileParseError
+            raise FileParseError(
+                file_path=file_path,
+                reason=f"文本文件解析失败: {type(e).__name__}",
+                original_error=e
+            )
 
 
 class MarkdownParser(FileParser):
@@ -142,8 +356,83 @@ class MarkdownParser(FileParser):
         Raises:
             FileParseError: 文件解析失败
         """
-        # 实现将在任务 2.3 中完成
-        raise NotImplementedError("MarkdownParser 将在任务 2.3 中实现")
+        # 验证文件存在
+        path = self._validate_file_exists(file_path)
+        
+        try:
+            # 尝试多种编码读取文件
+            encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
+            content = None
+            used_encoding = None
+            
+            for encoding in encodings:
+                try:
+                    with open(path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    used_encoding = encoding
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            # 如果所有编码都失败，抛出错误
+            if content is None:
+                raise FileParseError(
+                    file_path=file_path,
+                    reason=f"无法使用任何支持的编码读取文件（尝试过: {', '.join(encodings)}）"
+                )
+            
+            # 如果文件为空，抛出错误
+            if not content.strip():
+                raise FileParseError(
+                    file_path=file_path,
+                    reason="Markdown 文件为空"
+                )
+            
+            # 统计行数
+            line_count = content.count('\n') + 1
+            
+            # 分析 Markdown 结构（标题、代码块等）
+            lines = content.split('\n')
+            heading_count = 0
+            code_block_count = 0
+            in_code_block = False
+            
+            for line in lines:
+                # 统计标题
+                if line.strip().startswith('#'):
+                    heading_count += 1
+                # 统计代码块
+                if line.strip().startswith('```'):
+                    if not in_code_block:
+                        code_block_count += 1
+                    in_code_block = not in_code_block
+            
+            # 构建元数据
+            metadata = {
+                "encoding": used_encoding,
+                "line_count": line_count,
+                "total_chars": len(content),
+                "heading_count": heading_count,
+                "code_block_count": code_block_count,
+                "format": "markdown"
+            }
+            
+            return ParsedDocument(
+                content=content,
+                page_count=None,  # Markdown 文件没有页数概念
+                metadata=metadata
+            )
+            
+        except FileParseError:
+            # 重新抛出已经格式化的 FileParseError
+            raise
+        except Exception as e:
+            # 捕获所有其他异常并包装为 FileParseError
+            raise FileParseError(
+                file_path=file_path,
+                reason=f"Markdown 文件解析失败: {type(e).__name__}",
+                original_error=e
+            )
 
 
 class FileParserFactory:
