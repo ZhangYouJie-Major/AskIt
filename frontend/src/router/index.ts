@@ -15,8 +15,22 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/admin',
     name: 'Admin',
-    component: () => import('@/views/AdminView.vue'),
-    meta: { title: '管理后台' }
+    component: () => import('@/layouts/AdminLayout.vue'),
+    meta: { title: '管理后台' },
+    children: [
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('@/views/UserManageView.vue'),
+        meta: { title: '用户管理' }
+      },
+      {
+        path: 'roles',
+        name: 'RoleManage',
+        component: () => import('@/views/RoleManageView.vue'),
+        meta: { title: '角色管理' }
+      }
+    ]
   }
 ]
 

@@ -52,6 +52,7 @@ class User(Base):
 
     # 关系
     department = relationship("Department", back_populates="users")
+    roles = relationship("Role", secondary="user_roles", back_populates="users", viewonly=True)
 
 
 class Document(Base):

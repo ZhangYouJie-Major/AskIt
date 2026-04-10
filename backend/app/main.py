@@ -59,6 +59,13 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("✅ 数据库初始化完成")
 
+    # 初始化 RBAC 权限数据
+    from app.core.database import AsyncSessionLocal
+    from app.services.rbac import RBACService
+    async with AsyncSessionLocal() as session:
+        permissions = await RBACService.init_permissions(session)
+        logger.info(f"✅ RBAC 权限初始化完成，共 {len(permissions)} 个权限")
+
     yield
 
     # 关闭时执行

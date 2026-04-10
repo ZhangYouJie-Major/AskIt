@@ -60,6 +60,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi, authStorage } from './api/auth'
+import { loadUserPermissions, clearPermissions } from './composables/usePermission'
 
 const route = useRoute()
 const currentRoute = computed(() => route.path)
@@ -76,12 +77,14 @@ const loginForm = ref({
 })
 
 // 检查登录状态
-onMounted(() => {
+onMounted(async () => {
   const token = authStorage.getToken()
   const user = authStorage.getUser()
   if (token && user) {
     isLoggedIn.value = true
     username.value = user.username || user.full_name || user.email
+    // 加载用户权限
+    await loadUserPermissions()
   }
 })
 
@@ -107,6 +110,9 @@ const handleLogin = async () => {
     loginDialogVisible.value = false
     loginForm.value = { username: '', password: '' }
     ElMessage.success('登录成功')
+
+    // 加载用户权限
+    await loadUserPermissions()
   } catch (error: any) {
     console.error('[Login] 登录失败:', error)
     ElMessage.error(error.response?.data?.detail || '登录失败')
@@ -118,6 +124,7 @@ const handleLogin = async () => {
 // 处理退出登录
 const handleLogout = () => {
   authStorage.clear()
+  clearPermissions()
   isLoggedIn.value = false
   username.value = ''
   ElMessage.success('已退出登录')
