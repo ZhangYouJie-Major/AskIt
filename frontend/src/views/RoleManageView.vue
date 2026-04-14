@@ -79,17 +79,18 @@
     <!-- 配置权限抽屉 -->
     <el-drawer v-model="permissionsDrawerVisible" title="配置权限" size="500px">
       <div class="permissions-config">
-        <el-checkbox
-          v-for="perm in allPermissions"
-          :key="perm.id"
-          v-model="selectedPermissionIds"
-          :label="perm.id"
-          style="display: block; margin-bottom: 12px"
-        >
-          <strong>{{ perm.name }}</strong>
-          <span class="perm-code">{{ perm.code }}</span>
-          <span class="perm-desc">{{ perm.description }}</span>
-        </el-checkbox>
+        <el-checkbox-group v-model="selectedPermissionIds">
+          <el-checkbox
+            v-for="perm in allPermissions"
+            :key="perm.id"
+            :label="perm.id"
+            style="display: block; margin-bottom: 12px"
+          >
+            <strong>{{ perm.name }}</strong>
+            <span class="perm-code">{{ perm.code }}</span>
+            <span class="perm-desc">{{ perm.description }}</span>
+          </el-checkbox>
+        </el-checkbox-group>
       </div>
       <template #footer>
         <el-button @click="permissionsDrawerVisible = false">取消</el-button>

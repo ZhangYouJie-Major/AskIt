@@ -6,7 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, get_password_hash
@@ -62,7 +62,7 @@ class UserListResponse(BaseModel):
     department_id: int | None
     department_name: str | None
     last_login: str | None
-    roles: List["UserRoleResponse"] = []
+    roles: List["UserRoleResponse"] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -81,14 +81,19 @@ class UserRoleResponse(BaseModel):
 async def list_users(
     skip: int = 0,
     limit: int = 100,
+    department_id: int | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission("user:read"))
 ):
     """
     获取用户列表
     """
+    query = select(User).order_by(User.id)
+    if department_id is not None:
+        query = query.where(User.department_id == department_id)
+
     result = await db.execute(
-        select(User).offset(skip).limit(limit).order_by(User.id)
+        query.offset(skip).limit(limit)
     )
     users = result.scalars().all()
 

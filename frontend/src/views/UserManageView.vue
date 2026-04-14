@@ -11,6 +11,24 @@
         </div>
       </template>
 
+      <div class="table-toolbar">
+        <el-select
+          v-model="departmentFilter"
+          placeholder="全部部门"
+          clearable
+          filterable
+          style="width: 220px"
+          @change="handleDepartmentChange"
+        >
+          <el-option
+            v-for="dept in departments"
+            :key="dept.id"
+            :label="dept.name"
+            :value="dept.id"
+          />
+        </el-select>
+      </div>
+
       <el-table :data="users" v-loading="loading" stripe>
         <el-table-column prop="username" label="用户名" width="150" />
         <el-table-column prop="email" label="邮箱" width="200" />
@@ -87,7 +105,7 @@
         </el-form-item>
         <el-form-item label="部门">
           <el-select v-model="form.department_id" placeholder="选择部门">
-            <el-option label="无" :value="null" />
+            <el-option label="无" :value="emptyDepartmentValue" />
             <el-option
               v-for="dept in departments"
               :key="dept.id"
@@ -137,6 +155,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { departmentsApi } from '@/api/departments'
 import { rolesApi, userRolesApi } from '@/api/rbac'
 import api from '@/api'
 import { usePermission } from '@/composables/usePermission'
@@ -149,6 +168,8 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const departments = ref<any[]>([])
+const departmentFilter = ref<number | null>(null)
+const emptyDepartmentValue = null as unknown as number
 
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
@@ -169,12 +190,25 @@ const form = reactive({
   is_active: true
 })
 
+const loadDepartments = async () => {
+  try {
+    departments.value = await departmentsApi.list()
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载部门失败')
+  }
+}
+
 const loadUsers = async () => {
   loading.value = true
   try {
-    const response = await api.get('/users/', {
-      params: { skip: (currentPage.value - 1) * pageSize.value, limit: pageSize.value }
-    })
+    const params: { skip: number; limit: number; department_id?: number } = {
+      skip: (currentPage.value - 1) * pageSize.value,
+      limit: pageSize.value
+    }
+    if (departmentFilter.value !== null) {
+      params.department_id = departmentFilter.value
+    }
+    const response = await api.get('/users/', { params })
     users.value = Array.isArray(response) ? response : []
     total.value = users.value.length
   } catch (error: any) {
@@ -182,6 +216,11 @@ const loadUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleDepartmentChange = () => {
+  currentPage.value = 1
+  loadUsers()
 }
 
 const handleCreate = () => {
@@ -192,7 +231,7 @@ const handleCreate = () => {
     email: '',
     password: '',
     full_name: '',
-    department_id: null,
+    department_id: emptyDepartmentValue,
     is_active: true
   })
   dialogVisible.value = true
@@ -228,7 +267,14 @@ const handleSubmit = async () => {
       await api.post('/users/', form)
       ElMessage.success('创建成功')
     } else {
-      const data = { ...form }
+      const data: {
+        username: string
+        email: string
+        password?: string
+        full_name: string
+        department_id: number | null
+        is_active: boolean
+      } = { ...form }
       if (!data.password) delete data.password
       await api.put(`/users/${editingUserId.value}`, data)
       ElMessage.success('更新成功')
@@ -288,6 +334,7 @@ const formatDate = (date: string | null) => {
 }
 
 onMounted(() => {
+  loadDepartments()
   loadUsers()
 })
 </script>
@@ -302,6 +349,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
 }
 
 .role-tag {

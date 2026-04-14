@@ -81,3 +81,6 @@ frontend/src/components.d.ts
 
 # Docker
 .dockerignore
+
+# Playwright MCP runtime snapshots
+.playwright-mcp/

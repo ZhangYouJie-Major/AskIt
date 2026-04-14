@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { authStorage } from '@/api/auth'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,6 +20,10 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '管理后台' },
     children: [
       {
+        path: '',
+        redirect: '/admin/users'
+      },
+      {
         path: 'users',
         name: 'UserManage',
         component: () => import('@/views/UserManageView.vue'),
@@ -29,6 +34,12 @@ const routes: RouteRecordRaw[] = [
         name: 'RoleManage',
         component: () => import('@/views/RoleManageView.vue'),
         meta: { title: '角色管理' }
+      },
+      {
+        path: 'departments',
+        name: 'DepartmentManage',
+        component: () => import('@/views/DepartmentManageView.vue'),
+        meta: { title: '部门管理' }
       }
     ]
   }
@@ -39,7 +50,12 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
+  if (to.path === '/admin/departments' && !authStorage.getUser()?.is_superuser) {
+    next('/admin/users')
+    return
+  }
+
   document.title = `${to.meta.title || 'AskIt'} - 企业知识库`
   next()
 })

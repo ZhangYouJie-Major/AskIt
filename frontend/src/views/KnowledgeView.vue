@@ -86,7 +86,6 @@ const handleQuery = async () => {
   try {
     const response = await queryApi.query({
       question: userMessage,
-      department_id: 1, // TODO: 从用户信息获取
       history: messages.value
         .filter(m => m.role === 'user')
         .map(m => ({ role: m.role, content: m.content })),

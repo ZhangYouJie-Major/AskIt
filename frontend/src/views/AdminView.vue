@@ -55,7 +55,7 @@
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="handleView(row)">查看</el-button>
+            <el-button size="small" @click="handleView">查看</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">
               删除
             </el-button>
@@ -101,6 +101,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { TagProps } from 'element-plus'
 import { documentApi } from '@/api/modules'
 
 const stats = ref([
@@ -152,7 +153,7 @@ const doUpload = async () => {
 
   uploading.value = true
   try {
-    await documentApi.upload(uploadFile.value, 1)
+    await documentApi.upload(uploadFile.value)
     ElMessage.success('上传成功')
     uploadDialogVisible.value = false
     uploadFile.value = null
@@ -164,7 +165,7 @@ const doUpload = async () => {
   }
 }
 
-const handleView = (row: any) => {
+const handleView = () => {
   ElMessage.info('查看功能开发中')
 }
 
@@ -189,8 +190,8 @@ const formatFileSize = (bytes: number) => {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
+const getStatusType = (status: string): TagProps['type'] => {
+  const map: Record<string, TagProps['type']> = {
     pending: 'info',
     processing: 'warning',
     completed: 'success',
