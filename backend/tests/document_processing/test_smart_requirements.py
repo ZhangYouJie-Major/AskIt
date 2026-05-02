@@ -6,30 +6,8 @@
 需求 2.7: WHEN 单个段落超过最大块大小，THE Document_Chunker SHALL 强制分割并保留重叠
 """
 import sys
-from pathlib import Path
-import importlib.util
 
-# 设置路径并加载模块
-backend_dir = Path(__file__).parent
-sys.path.insert(0, str(backend_dir))
-
-# 加载 types 模块
-types_path = backend_dir / "app" / "services" / "document_processing" / "types.py"
-spec = importlib.util.spec_from_file_location("types_module", types_path)
-types_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(types_module)
-
-ChunkStrategy = types_module.ChunkStrategy
-TextChunk = types_module.TextChunk
-
-# 加载 chunker 模块
-chunker_path = backend_dir / "app" / "services" / "document_processing" / "chunker.py"
-spec = importlib.util.spec_from_file_location("chunker_module", chunker_path)
-chunker_module = importlib.util.module_from_spec(spec)
-sys.modules['app.services.document_processing.types'] = types_module
-spec.loader.exec_module(chunker_module)
-
-DocumentChunker = chunker_module.DocumentChunker
+from app.services.document_processing import ChunkStrategy, DocumentChunker
 
 
 def test_requirement_2_3_natural_boundaries():

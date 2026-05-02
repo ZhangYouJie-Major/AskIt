@@ -46,6 +46,11 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="error_message" label="失败原因" min-width="160">
+          <template #default="{ row }">
+            {{ row.status === 'failed' ? row.error_message || '-' : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="vectorized" label="已向量化" width="100">
           <template #default="{ row }">
             <el-tag :type="row.vectorized ? 'success' : 'info'">
@@ -99,9 +104,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { TagProps } from 'element-plus'
+import type { Document } from '@/api/modules'
 import { documentApi } from '@/api/modules'
 
 const stats = ref([
@@ -111,15 +117,42 @@ const stats = ref([
   { key: 'pending', label: '待处理', value: 0, icon: 'Clock', color: '#f56c6c' },
 ])
 
-const documents = ref<any[]>([])
+const documents = ref<Document[]>([])
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const pollingTimer = ref<number | null>(null)
 
 const uploadDialogVisible = ref(false)
 const uploading = ref(false)
 const uploadFile = ref<File | null>(null)
+
+const hasProcessingDocuments = () => {
+  return documents.value.some((document) => ['pending', 'processing'].includes(document.status))
+}
+
+const stopPolling = () => {
+  if (pollingTimer.value !== null) {
+    window.clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+}
+
+const syncPolling = () => {
+  if (!hasProcessingDocuments()) {
+    stopPolling()
+    return
+  }
+
+  if (pollingTimer.value === null) {
+    pollingTimer.value = window.setInterval(() => {
+      if (!loading.value) {
+        void loadDocuments()
+      }
+    }, 5000)
+  }
+}
 
 const loadDocuments = async () => {
   loading.value = true
@@ -130,6 +163,7 @@ const loadDocuments = async () => {
     })
     documents.value = response.documents
     total.value = response.total
+    syncPolling()
   } catch (error: any) {
     ElMessage.error(error.message || '加载失败')
   } finally {
@@ -157,7 +191,7 @@ const doUpload = async () => {
     ElMessage.success('上传成功')
     uploadDialogVisible.value = false
     uploadFile.value = null
-    loadDocuments()
+    void loadDocuments()
   } catch (error: any) {
     ElMessage.error(error.message || '上传失败')
   } finally {
@@ -176,7 +210,7 @@ const handleDelete = async (row: any) => {
     })
     await documentApi.delete(row.id)
     ElMessage.success('删除成功')
-    loadDocuments()
+    void loadDocuments()
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.message || '删除失败')
@@ -211,7 +245,11 @@ const getStatusText = (status: string) => {
 }
 
 onMounted(() => {
-  loadDocuments()
+  void loadDocuments()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 

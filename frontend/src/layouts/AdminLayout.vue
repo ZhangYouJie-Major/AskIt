@@ -7,6 +7,10 @@
         router
         class="sidebar-menu"
       >
+        <el-menu-item index="/admin/documents">
+          <el-icon><DocumentIcon /></el-icon>
+          <span>文档管理</span>
+        </el-menu-item>
         <el-menu-item index="/admin/users">
           <el-icon><User /></el-icon>
           <span>用户管理</span>
@@ -34,7 +38,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { User, Key, OfficeBuilding } from '@element-plus/icons-vue'
+import { Document as DocumentIcon, User, Key, OfficeBuilding } from '@element-plus/icons-vue'
 import { authStorage } from '@/api/auth'
 
 const route = useRoute()

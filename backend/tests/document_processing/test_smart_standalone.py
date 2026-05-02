@@ -3,35 +3,8 @@
 不依赖 app.services 的初始化
 """
 import sys
-import os
-from pathlib import Path
 
-# 添加 backend 目录到路径
-backend_dir = Path(__file__).parent
-sys.path.insert(0, str(backend_dir))
-
-# 使用 importlib 直接加载模块，避免触发 __init__.py
-import importlib.util
-
-# 加载 types 模块
-types_path = backend_dir / "app" / "services" / "document_processing" / "types.py"
-spec = importlib.util.spec_from_file_location("types_module", types_path)
-types_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(types_module)
-
-ChunkStrategy = types_module.ChunkStrategy
-TextChunk = types_module.TextChunk
-
-# 加载 chunker 模块
-chunker_path = backend_dir / "app" / "services" / "document_processing" / "chunker.py"
-spec = importlib.util.spec_from_file_location("chunker_module", chunker_path)
-chunker_module = importlib.util.module_from_spec(spec)
-
-# 注入依赖
-sys.modules['app.services.document_processing.types'] = types_module
-spec.loader.exec_module(chunker_module)
-
-DocumentChunker = chunker_module.DocumentChunker
+from app.services.document_processing import ChunkStrategy, DocumentChunker
 
 
 def test_smart_english_sentence():

@@ -1,44 +1,51 @@
 """
 文档处理任务
 """
-import os
+import asyncio
 from typing import List
+
 from celery import shared_task
 
-from app.tasks.celery_worker import celery_app
-from app.services.embeddings import embedding_service
-from app.services.vector_store import vector_store
-from app.utils.chunker import chunker
+
+_task_loop = None
+
+
+def _get_task_loop():
+    global _task_loop
+    if _task_loop is None or _task_loop.is_closed():
+        _task_loop = asyncio.new_event_loop()
+    return _task_loop
+
+
+def _run_async(coro):
+    loop = _get_task_loop()
+    return loop.run_until_complete(coro)
 
 
 @shared_task(name="process_document")
-def process_document(document_id: int, file_path: str):
+def process_document(document_id: int):
     """
     处理文档：解析、分块、向量化、存储
 
     Args:
         document_id: 文档ID
-        file_path: 文件路径
     """
-    # TODO: 实现实际的文档解析逻辑
-    # 1. 读取文件内容
-    # 2. 根据文件类型解析
-    # 3. 分块
-    # 4. 向量化
-    # 5. 存储到向量数据库
 
-    # 示例逻辑
-    chunks = chunker.chunk_text("示例文档内容")
-    vectors = embedding_service.embed_texts(chunks)
+    async def _process():
+        from app.core import database
+        from app.services import document_processor
 
-    # 存储到向量数据库
-    # ...
+        async with database.AsyncSessionLocal() as db:
+            service = document_processor.DocumentProcessingService(db)
+            result = await service.process(document_id)
+            return {
+                "document_id": result.document_id,
+                "chunk_count": result.chunk_count,
+                "status": result.status,
+                "error_message": result.error_message,
+            }
 
-    return {
-        "document_id": document_id,
-        "chunk_count": len(chunks),
-        "status": "completed"
-    }
+    return _run_async(_process())
 
 
 @shared_task(name="batch_process_documents")
@@ -46,7 +53,7 @@ def batch_process_documents(document_ids: List[int]):
     """批量处理文档"""
     results = []
     for doc_id in document_ids:
-        result = process_document.delay(doc_id, "")
+        result = process_document.delay(doc_id)
         results.append(result.id)
     return results
 

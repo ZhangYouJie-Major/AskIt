@@ -7,7 +7,7 @@ import tempfile
 import os
 
 # 添加 backend 目录到路径
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(backend_dir))
 
 # 直接导入类型和异常

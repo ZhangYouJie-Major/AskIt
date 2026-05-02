@@ -3,7 +3,6 @@
 """
 from typing import List, Dict, Any, Optional
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 
 from app.core.config import settings
 
@@ -19,13 +18,11 @@ class VectorStore:
         if settings.chroma_mode == "cloud":
             # Chroma Cloud 模式 - 使用 CloudClient
             # 参考: https://docs.trychroma.com/docs/run-chroma/cloud-client
-            self.client = chromadb.Client(
+            self.client = chromadb.CloudClient(
                 api_key=settings.chroma_api_key,
                 tenant=settings.chroma_tenant,
                 database=settings.chroma_database,
             )
-            self.tenant = settings.chroma_tenant
-            self.database = settings.chroma_database
         else:
             # 本地模式 - 使用 PersistentClient 进行持久化存储
             import os
@@ -33,35 +30,17 @@ class VectorStore:
             # 确保目录存在
             os.makedirs(persist_dir, exist_ok=True)
             self.client = chromadb.PersistentClient(path=persist_dir)
-            self.tenant = None
-            self.database = None
 
     async def init_collection(self, vector_size: int = 1536):
         """初始化集合"""
         try:
-            if settings.chroma_mode == "cloud":
-                # Cloud 模式需要指定 tenant 和 database
-                self.collection = self.client.get_collection(
-                    name=self.collection_name,
-                    tenant=self.tenant,
-                    database=self.database,
-                )
-            else:
-                self.collection = self.client.get_collection(name=self.collection_name)
+            self.collection = self.client.get_collection(name=self.collection_name)
         except Exception:
             # 集合不存在，创建新集合
-            if settings.chroma_mode == "cloud":
-                self.collection = self.client.create_collection(
-                    name=self.collection_name,
-                    tenant=self.tenant,
-                    database=self.database,
-                    metadata={"hnsw:space": "cosine"}
-                )
-            else:
-                self.collection = self.client.create_collection(
-                    name=self.collection_name,
-                    metadata={"hnsw:space": "cosine"}
-                )
+            self.collection = self.client.create_collection(
+                name=self.collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
 
     async def insert_points(
         self,
@@ -73,20 +52,11 @@ class VectorStore:
         if self.collection is None:
             await self.init_collection()
 
-        if settings.chroma_mode == "cloud":
-            self.collection.add(
-                ids=ids,
-                embeddings=vectors,
-                metadatas=metadatas,
-                tenant=self.tenant,
-                database=self.database,
-            )
-        else:
-            self.collection.add(
-                ids=ids,
-                embeddings=vectors,
-                metadatas=metadatas,
-            )
+        self.collection.add(
+            ids=ids,
+            embeddings=vectors,
+            metadatas=metadatas,
+        )
 
     async def search(
         self,
@@ -105,20 +75,11 @@ class VectorStore:
             where = {"department_id": department_id}
 
         # 执行查询
-        if settings.chroma_mode == "cloud":
-            results = self.collection.query(
-                query_embeddings=[vector],
-                n_results=limit,
-                where=where,
-                tenant=self.tenant,
-                database=self.database,
-            )
-        else:
-            results = self.collection.query(
-                query_embeddings=[vector],
-                n_results=limit,
-                where=where,
-            )
+        results = self.collection.query(
+            query_embeddings=[vector],
+            n_results=limit,
+            where=where,
+        )
 
         # 格式化结果
         formatted_results = []
@@ -142,14 +103,7 @@ class VectorStore:
         if self.collection is None:
             await self.init_collection()
 
-        if settings.chroma_mode == "cloud":
-            self.collection.delete(
-                ids=ids,
-                tenant=self.tenant,
-                database=self.database,
-            )
-        else:
-            self.collection.delete(ids=ids)
+        self.collection.delete(ids=ids)
 
     async def get_collection_stats(self) -> Dict[str, Any]:
         """获取集合统计信息"""
@@ -164,14 +118,7 @@ class VectorStore:
     async def reset_collection(self):
         """重置集合（删除所有数据）"""
         try:
-            if settings.chroma_mode == "cloud":
-                self.client.delete_collection(
-                    name=self.collection_name,
-                    tenant=self.tenant,
-                    database=self.database,
-                )
-            else:
-                self.client.delete_collection(name=self.collection_name)
+            self.client.delete_collection(name=self.collection_name)
             self.collection = None
             await self.init_collection()
         except Exception:

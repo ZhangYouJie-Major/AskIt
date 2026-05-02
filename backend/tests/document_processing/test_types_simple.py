@@ -10,10 +10,12 @@ sys.path.insert(0, os.path.dirname(__file__))
 # 直接导入模块文件，避免触发 app.services.__init__ 中的数据库初始化
 import importlib.util
 
+backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
 # 加载 types 模块
 types_spec = importlib.util.spec_from_file_location(
     "types_module",
-    os.path.join(os.path.dirname(__file__), "app/services/document_processing/types.py")
+    os.path.join(backend_dir, "app", "services", "document_processing", "types.py")
 )
 types_module = importlib.util.module_from_spec(types_spec)
 types_spec.loader.exec_module(types_module)
@@ -26,7 +28,7 @@ ChunkStrategy = types_module.ChunkStrategy
 # 加载 exceptions 模块
 exceptions_spec = importlib.util.spec_from_file_location(
     "exceptions_module",
-    os.path.join(os.path.dirname(__file__), "app/services/document_processing/exceptions.py")
+    os.path.join(backend_dir, "app", "services", "document_processing", "exceptions.py")
 )
 exceptions_module = importlib.util.module_from_spec(exceptions_spec)
 exceptions_spec.loader.exec_module(exceptions_module)

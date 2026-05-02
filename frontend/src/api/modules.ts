@@ -32,6 +32,7 @@ export interface Document {
   file_type: string
   file_size: number
   status: string
+  error_message?: string | null
   vectorized: boolean
   chunk_count: number
 }

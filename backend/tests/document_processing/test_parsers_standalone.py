@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # 添加 backend 目录到路径
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(backend_dir))
 
 # 直接导入类型和异常，避免通过 app.services
@@ -34,7 +34,7 @@ sys.modules['exceptions_module'] = exceptions_module
 
 # 修改 parsers 模块的导入
 import types as types_builtin
-parsers_code = parsers_path.read_text()
+parsers_code = parsers_path.read_text(encoding='utf-8')
 parsers_code = parsers_code.replace(
     "from .types import ParsedDocument",
     "from types_module import ParsedDocument"

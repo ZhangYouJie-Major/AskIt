@@ -83,6 +83,7 @@ class Settings(BaseSettings):
 
     # File Upload
     upload_max_size: int = 104857600  # 100MB
+    upload_storage_dir: str = "uploads"
     allowed_extensions_raw: str = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.png,.jpg,.jpeg"
 
     @property

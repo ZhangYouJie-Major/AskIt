@@ -21,7 +21,13 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        redirect: '/admin/users'
+        redirect: '/admin/documents'
+      },
+      {
+        path: 'documents',
+        name: 'DocumentManage',
+        component: () => import('@/views/AdminView.vue'),
+        meta: { title: '文档管理' }
       },
       {
         path: 'users',
